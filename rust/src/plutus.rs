@@ -152,6 +152,27 @@ impl CostModel {
     }
 }
 
+impl From<[i32; 166]> for CostModel {
+    fn from(values: [i32; 166]) -> Self {
+        CostModel(values.iter().map(|x| { Int::new_i32(*x).clone() }).collect())
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct LanguageViewEncoding(Vec<u8>);
+
+#[wasm_bindgen]
+impl LanguageViewEncoding {
+    pub fn new(bytes: Vec<u8>) -> LanguageViewEncoding {
+        Self(bytes)
+    }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        self.0.clone()
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Costmdls(std::collections::BTreeMap<Language, CostModel>);
@@ -180,7 +201,7 @@ impl Costmdls {
         Languages(self.0.iter().map(|(k, _v)| k.clone()).collect::<Vec<_>>())
     }
 
-    pub(crate) fn language_views_encoding(&self) -> Vec<u8> {
+    pub(crate) fn language_views_encoding(&self) -> LanguageViewEncoding {
         let mut serializer = Serializer::new_vec();
         let mut keys_bytes: Vec<(Language, Vec<u8>)> = self.0.iter().map(|(k, _v)| (k.clone(), k.to_bytes())).collect();
         // keys must be in canonical ordering first
@@ -204,7 +225,7 @@ impl Costmdls {
         }
         let out = serializer.finalize();
         println!("language_views = {}", hex::encode(out.clone()));
-        out
+        LanguageViewEncoding(out)
     }
 }
 
@@ -588,6 +609,18 @@ impl Redeemers {
 
     pub fn add(&mut self, elem: &Redeemer) {
         self.0.push(elem.clone());
+    }
+}
+
+impl Redeemers {
+    pub fn tot_ex_units(&self) -> Result<ExUnits,JsError> {
+        let mut mem = BigNum::from_str("0")?;
+        let mut step = BigNum::from_str("0")?;
+        for redeemer in &self.0 {
+            mem = mem.checked_add(&redeemer.ex_units().mem())?;
+            step = step.checked_add(&redeemer.ex_units().steps())?;
+        }
+        Ok(ExUnits::new(&mem, &step))
     }
 }
 
@@ -1312,7 +1345,7 @@ mod tests {
         let mut cms = Costmdls::new();
         cms.insert(&Language::new_plutus_v1(), &cm);
         assert_eq!(
-            hex::encode(cms.language_views_encoding()),
+            hex::encode(cms.language_views_encoding().bytes()),
             "a141005901d59f1a000302590001011a00060bc719026d00011a000249f01903e800011a000249f018201a0025cea81971f70419744d186419744d186419744d186419744d186419744d186419744d18641864186419744d18641a000249f018201a000249f018201a000249f018201a000249f01903e800011a000249f018201a000249f01903e800081a000242201a00067e2318760001011a000249f01903e800081a000249f01a0001b79818f7011a000249f0192710011a0002155e19052e011903e81a000249f01903e8011a000249f018201a000249f018201a000249f0182001011a000249f0011a000249f0041a000194af18f8011a000194af18f8011a0002377c190556011a0002bdea1901f1011a000249f018201a000249f018201a000249f018201a000249f018201a000249f018201a000249f018201a000242201a00067e23187600010119f04c192bd200011a000249f018201a000242201a00067e2318760001011a000242201a00067e2318760001011a0025cea81971f704001a000141bb041a000249f019138800011a000249f018201a000302590001011a000249f018201a000249f018201a000249f018201a000249f018201a000249f018201a000249f018201a000249f018201a00330da70101ff"
         );
     }

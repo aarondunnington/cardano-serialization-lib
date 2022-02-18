@@ -48,6 +48,7 @@ pub mod output_builder;
 pub mod plutus;
 pub mod serialization;
 pub mod tx_builder;
+pub mod constants;
 pub mod typed_bytes;
 pub mod emip3;
 #[macro_use]
@@ -1442,7 +1443,7 @@ impl TransactionWitnessSet {
     }
 
     pub fn set_plutus_data(&mut self, plutus_data: &PlutusList) {
-        self.plutus_data = Some(plutus_data.clone())
+        self.plutus_data = Some(plutus_data.clone());
     }
 
     pub fn plutus_data(&self) -> Option<PlutusList> {
