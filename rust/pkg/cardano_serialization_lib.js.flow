@@ -6,6 +6,20 @@
  */
 
 /**
+ * @param {Transaction} tx
+ * @param {LinearFee} linear_fee
+ * @param {number} mem_price
+ * @param {number} step_price
+ * @returns {BigNum}
+ */
+declare export function min_fee(
+  tx: Transaction,
+  linear_fee: LinearFee,
+  mem_price: number,
+  step_price: number
+): BigNum;
+
+/**
  * @param {TransactionHash} tx_body_hash
  * @param {ByronAddress} addr
  * @param {LegacyDaedalusPrivateKey} key
@@ -70,6 +84,18 @@ declare export function hash_plutus_data(plutus_data: PlutusData): DataHash;
 declare export function hash_script_data(
   redeemers: Redeemers,
   cost_models: Costmdls,
+  datums?: PlutusList
+): ScriptDataHash;
+
+/**
+ * @param {Redeemers} redeemers
+ * @param {LanguageViewEncoding} language_views_encoding
+ * @param {PlutusList | void} datums
+ * @returns {ScriptDataHash}
+ */
+declare export function hash_script_data2(
+  redeemers: Redeemers,
+  language_views_encoding: LanguageViewEncoding,
   datums?: PlutusList
 ): ScriptDataHash;
 
@@ -164,13 +190,6 @@ declare export function decode_metadatum_to_json_str(
   metadatum: TransactionMetadatum,
   schema: number
 ): string;
-
-/**
- * @param {Transaction} tx
- * @param {LinearFee} linear_fee
- * @returns {BigNum}
- */
-declare export function min_fee(tx: Transaction, linear_fee: LinearFee): BigNum;
 
 /**
  * @param {string} password
@@ -307,14 +326,6 @@ declare export var CoinSelectionStrategyCIP2: {|
 /**
  */
 
-declare export var StakeCredKind: {|
-  +Key: 0, // 0
-  +Script: 1, // 1
-|};
-
-/**
- */
-
 declare export var LanguageKind: {|
   +PlutusV1: 0, // 0
 |};
@@ -338,6 +349,14 @@ declare export var RedeemerTagKind: {|
   +Mint: 1, // 1
   +Cert: 2, // 2
   +Reward: 3, // 3
+|};
+
+/**
+ */
+
+declare export var StakeCredKind: {|
+  +Key: 0, // 0
+  +Script: 1, // 1
 |};
 
 /**
@@ -705,6 +724,12 @@ declare export class BigNum {
    * @returns {BigNum}
    */
   checked_mul(other: BigNum): BigNum;
+
+  /**
+   * @param {BigNum} other
+   * @returns {BigNum}
+   */
+  checked_div(other: BigNum): BigNum;
 
   /**
    * @param {BigNum} other
@@ -1274,6 +1299,29 @@ declare export class Certificates {
    * @param {Certificate} elem
    */
   add(elem: Certificate): void;
+}
+/**
+ */
+declare export class Constants {
+  free(): void;
+
+  /**
+   * The function accepts the number of the "current" epoch and returns the
+   * default Plutus cost-models object to be used in that epoch
+   * @param {number} _epoch
+   * @returns {Costmdls}
+   */
+  static plutus_default_cost_models(_epoch: number): Costmdls;
+
+  /**
+   * The function accepts the number of the "current" epoch and returns the
+   * default Plutus language-views-encoding object to be used in that epoch
+   * @param {number} _epoch
+   * @returns {LanguageViewEncoding}
+   */
+  static plutus_default_language_views_encoding(
+    _epoch: number
+  ): LanguageViewEncoding;
 }
 /**
  */
@@ -2179,6 +2227,22 @@ declare export class Language {
    * @returns {number}
    */
   kind(): number;
+}
+/**
+ */
+declare export class LanguageViewEncoding {
+  free(): void;
+
+  /**
+   * @param {Uint8Array} bytes
+   * @returns {LanguageViewEncoding}
+   */
+  static new(bytes: Uint8Array): LanguageViewEncoding;
+
+  /**
+   * @returns {Uint8Array}
+   */
+  bytes(): Uint8Array;
 }
 /**
  */
@@ -5290,6 +5354,42 @@ declare export class TransactionBuilder {
   ): void;
 
   /**
+   * @param {Address} address
+   */
+  add_address_witness(address: Address): void;
+
+  /**
+   * @param {TransactionInputs} collateral
+   */
+  set_collateral(collateral: TransactionInputs): void;
+
+  /**
+   * @param {PlutusList} plutus_data
+   */
+  set_plutus_data(plutus_data: PlutusList): void;
+
+  /**
+   * @param {Redeemers} redeemers
+   */
+  set_redeemers(redeemers: Redeemers): void;
+
+  /**
+   * @param {PlutusScripts} plutus_scripts
+   */
+  set_plutus_scripts(plutus_scripts: PlutusScripts): void;
+
+  /**
+   * @param {Ed25519KeyHashes} required_signers
+   */
+  set_required_signers(required_signers: Ed25519KeyHashes): void;
+
+  /**
+   * @param {TransactionInput} input
+   * @returns {number}
+   */
+  index_of_input(input: TransactionInput): number;
+
+  /**
    * @param {TransactionBuilderConfig} cfg
    * @returns {TransactionBuilder}
    */
@@ -5425,6 +5525,18 @@ declare export class TransactionBuilderConfigBuilder {
    * @returns {TransactionBuilderConfigBuilder}
    */
   max_tx_size(max_tx_size: number): TransactionBuilderConfigBuilder;
+
+  /**
+   * @param {number} price_mem
+   * @returns {TransactionBuilderConfigBuilder}
+   */
+  price_mem(price_mem: number): TransactionBuilderConfigBuilder;
+
+  /**
+   * @param {number} price_step
+   * @returns {TransactionBuilderConfigBuilder}
+   */
+  price_step(price_step: number): TransactionBuilderConfigBuilder;
 
   /**
    * @param {boolean} prefer_pure_change

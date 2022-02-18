@@ -152,9 +152,30 @@ impl CostModel {
     }
 }
 
+impl From<[i32; 166]> for CostModel {
+    fn from(values: [i32; 166]) -> Self {
+        CostModel(values.iter().map(|x| { Int::new_i32(*x).clone() }).collect())
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Costmdls(std::collections::BTreeMap<Language, CostModel>);
+
+#[wasm_bindgen]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct LanguageViewEncoding(pub(crate) Vec<u8>);
+
+#[wasm_bindgen]
+impl LanguageViewEncoding {
+    pub fn new(bytes: Vec<u8>) -> LanguageViewEncoding {
+        Self(bytes)
+    }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        self.0.clone()
+    }
+}
 
 to_from_bytes!(Costmdls);
 
@@ -180,7 +201,7 @@ impl Costmdls {
         Languages(self.0.iter().map(|(k, _v)| k.clone()).collect::<Vec<_>>())
     }
 
-    pub(crate) fn language_views_encoding(&self) -> Vec<u8> {
+    pub(crate) fn language_views_encoding(&self) -> LanguageViewEncoding {
         let mut serializer = Serializer::new_vec();
         let mut keys_bytes: Vec<(Language, Vec<u8>)> = self.0.iter().map(|(k, _v)| (k.clone(), k.to_bytes())).collect();
         // keys must be in canonical ordering first
@@ -204,7 +225,7 @@ impl Costmdls {
         }
         let out = serializer.finalize();
         println!("language_views = {}", hex::encode(out.clone()));
-        out
+        LanguageViewEncoding(out)
     }
 }
 
@@ -489,6 +510,12 @@ impl PlutusList {
     }
 }
 
+impl PlutusList {
+    pub fn set_definite_encoding(&mut self, use_definite_encoding: bool) {
+        self.definite_encoding = Some(use_definite_encoding)
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Redeemer {
@@ -588,6 +615,18 @@ impl Redeemers {
 
     pub fn add(&mut self, elem: &Redeemer) {
         self.0.push(elem.clone());
+    }
+}
+
+impl Redeemers {
+    pub fn tot_ex_units(&self) -> Result<ExUnits,JsError> {
+        let mut mem = BigNum::from_str("0")?;
+        let mut step = BigNum::from_str("0")?;
+        for redeemer in &self.0 {
+            mem = mem.checked_add(&redeemer.ex_units().mem())?;
+            step = step.checked_add(&redeemer.ex_units().steps())?;
+        }
+        Ok(ExUnits::new(&mem, &step))
     }
 }
 

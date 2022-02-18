@@ -197,6 +197,13 @@ impl BigNum {
         }
     }
 
+    pub fn checked_div(&self, other: &BigNum) -> Result<BigNum, JsError> {
+        match self.0.checked_div(other.0) {
+            Some(value) => Ok(BigNum(value)),
+            None => Err(JsError::from_str("overflow")),
+        }
+    }
+
     pub fn checked_add(&self, other: &BigNum) -> Result<BigNum, JsError> {
         match self.0.checked_add(other.0) {
             Some(value) => Ok(BigNum(value)),
@@ -896,9 +903,21 @@ pub fn hash_transaction(tx_body: &TransactionBody) -> TransactionHash {
 pub fn hash_plutus_data(plutus_data: &PlutusData) -> DataHash {
     DataHash::from(blake2b256(&plutus_data.to_bytes()))
 }
+
 #[wasm_bindgen]
 pub fn hash_script_data(redeemers: &Redeemers, cost_models: &Costmdls, datums: Option<PlutusList>) -> ScriptDataHash {
+    hash_script_data2(redeemers, &cost_models.language_views_encoding(), datums)
+}
+
+#[wasm_bindgen]
+pub fn hash_script_data2(
+        redeemers: &Redeemers,
+        language_views_encoding: &LanguageViewEncoding,
+        datums: Option<PlutusList>) -> ScriptDataHash {
+
+    
     let mut buf = Vec::new();
+    
     if redeemers.len() == 0 && datums.is_some() {
         /*
         ; Finally, note that in the case that a transaction includes datums but does not
@@ -923,7 +942,8 @@ pub fn hash_script_data(redeemers: &Redeemers, cost_models: &Costmdls, datums: O
         if let Some(d) = &datums {
             buf.extend(d.to_bytes());
         }
-        buf.extend(cost_models.language_views_encoding());
+
+        buf.extend(language_views_encoding.bytes());
     }
     ScriptDataHash::from(blake2b256(&buf))
 }
